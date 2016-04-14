@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="horizontal" android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    <ImageView
+        android:id = "@+id/req_player_icon"
+        android:layout_weight="0.20"
+        android:layout_width="0dp"
+        android:layout_height="match_parent" />
+
+    <TextView
+        android:id = "@+id/req_user"
+        android:layout_weight="0.30"
+        android:layout_width="0dp"
+        android:layout_height="match_parent" />
+    <Button
+        android:id = "@+id/positive"
+        android:layout_weight="0.25"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:text = "Accept"/>
+    <Button
+        android:id = "@+id/negative"
+        android:layout_weight="0.25"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:text = "Deny"/>
+
+</LinearLayout>
