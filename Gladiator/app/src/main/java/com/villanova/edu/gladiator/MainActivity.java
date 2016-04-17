@@ -39,7 +39,6 @@ public class MainActivity extends AppCompatActivity {
     private ActionBarDrawerToggle mDrawerToggle;
     private DrawerLayout mDrawerLayout;
     private String mActivityTitle;
-
     FrameLayout fragmentHolder;
     String username;
     String usersTeam = "None";
@@ -72,15 +71,11 @@ public class MainActivity extends AppCompatActivity {
 
         // Create ArrayAdapter using the planet list.
 
-
-
         mDrawerList = (ListView)findViewById(R.id.navList);
         mDrawerLayout = (DrawerLayout)findViewById(R.id.drawer_layout);
         mActivityTitle = getTitle().toString();
-
         addDrawerItems();
         setupDrawer();
-
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setHomeButtonEnabled(true);
         selectItem(0);

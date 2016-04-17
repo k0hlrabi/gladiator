@@ -60,7 +60,6 @@ public class TeamActivity extends Fragment implements View.OnClickListener {
     private DrawerLayout mDrawerLayout;
     private ListView mDrawerList;
     private String mActivityTitle;
-
     static final String appPrefKey = "TheGladiatorApp";
 
 
@@ -104,9 +103,6 @@ public class TeamActivity extends Fragment implements View.OnClickListener {
         setVisibleTeam(getArguments().getString("Team", "None"));
 
         Log.d("DEBUG",getArguments().getString("Team","None"));
-
-
-
 
 
         return out;
