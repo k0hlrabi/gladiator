@@ -1,5 +1,6 @@
 package com.villanova.edu.gladiator;
 
+import android.preference.PreferenceManager;
 import android.provider.ContactsContract;
 import android.support.v7.app.AppCompatActivity;
 import android.app.ProgressDialog;
@@ -78,50 +79,52 @@ public class LoginActivity extends AppCompatActivity {
         final String email = _emailText.getText().toString();
         String password = _passwordText.getText().toString();
         final String[] userName = {" "};
+        final String[] team = {" "};
 
         // TODO: Implement your own authentication logic here.
         final Firebase ref = new Firebase("https://blistering-fire-747.firebaseio.com/");
-        SharedPreferences pref = getApplicationContext().getSharedPreferences(prefsKey, 0); // 0 - for private mode
-        final SharedPreferences.Editor editor = pref.edit();
+        SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());// 0 - for private mode
+         final SharedPreferences.Editor editor = pref.edit();
         ref.authWithPassword(email, password, new Firebase.AuthResultHandler() {
             @Override
             public void onAuthenticated(AuthData authData) {
              ref.child("users").addValueEventListener(new ValueEventListener() {
-                    @Override
-                    public void onDataChange(DataSnapshot dataSnapshot) {
-                        for(DataSnapshot a: dataSnapshot.getChildren()){
-                            if(a.child("email").getValue().toString().contains(email)){
-                               userName[0] =  a.getKey();
-                                editor.putString("User",a.getKey());
-                                break;
-                            }
-                        }
-                    }
+                 @Override
+                 public void onDataChange(DataSnapshot dataSnapshot) {
+                     for (DataSnapshot a : dataSnapshot.getChildren()) {
+                         if (a.child("email").getValue().toString().contains(email)) {
+                             userName[0] = a.getKey();
+                             Log.d("DEBUG", "FOUND USERNAME" + a.getKey());
+                             break;
+                         }
+                     }
+                 }
 
-                    @Override
-                    public void onCancelled(FirebaseError firebaseError) {
+                 @Override
+                 public void onCancelled(FirebaseError firebaseError) {
 
-                    }
-                });
+                 }
+             });
                 //Find the user's team
                 ref.child("Teams").addValueEventListener(new ValueEventListener() {
                     @Override
                     public void onDataChange(DataSnapshot dataSnapshot) {
-                                //GO through each team
-                            for(DataSnapshot sshot : dataSnapshot.getChildren()){
-                                //Go through each datapoint in team
-                                for(DataSnapshot sshot2: sshot.child("Players").getChildren()) {
-                                    if(sshot2.getKey().contains(userName[0])){
-                                        editor.putString("Team",sshot.getKey());
-                                        break;
-                                    }
-
-
+                        //GO through each team
+                        for (DataSnapshot sshot : dataSnapshot.getChildren()) {
+                            //Go through each datapoint in team
+                            for (DataSnapshot sshot2 : sshot.child("Players").getChildren()) {
+                                if (sshot2.getKey().contains(userName[0])) {
+                                    team[0] = sshot.child("Info").child("Name").getValue().toString();
+                                    Log.d("DEBUG", "FOUND USERS TEAM" + sshot.child("Info").child("Name").getValue().toString());
+                                    break;
                                 }
-
-
-
                             }
+
+
+                        }
+                        editor.putString("User", userName[0]);
+                        editor.putString("Team", team[0]);
+                        editor.apply();
                     }
 
                     @Override
@@ -132,7 +135,6 @@ public class LoginActivity extends AppCompatActivity {
 
 
 
-                editor.apply();
 
             }
 
@@ -175,9 +177,6 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     public void onLoginSuccess() {
-
-
-
 
         finish();
     }

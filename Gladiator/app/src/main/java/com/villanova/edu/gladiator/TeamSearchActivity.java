@@ -1,6 +1,7 @@
 package com.villanova.edu.gladiator;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.provider.ContactsContract;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -12,6 +13,7 @@ import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.SimpleAdapter;
+import android.widget.TextView;
 
 import com.firebase.client.DataSnapshot;
 import com.firebase.client.Firebase;
@@ -25,6 +27,9 @@ public class TeamSearchActivity extends AppCompatActivity {
     EditText searchBox;
     ListView searchResults;
     Firebase firebaseRef;
+    String output_team = "None";
+    static final String appPrefKey = "TheGladiatorApp";
+
     final List<String> teamList = new ArrayList<String>();
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,6 +72,7 @@ public class TeamSearchActivity extends AppCompatActivity {
                         for (DataSnapshot shot : dataSnapshot.getChildren()) {
                             if (shot.child("Info").child("Name").getValue().toString().toLowerCase().contains(searchBox.getText().toString().toLowerCase())) {
                                 teamList.add(shot.child("Info").child("Name").getValue().toString());
+
                             }
                         }
                     }
@@ -88,10 +94,8 @@ public class TeamSearchActivity extends AppCompatActivity {
         searchResults.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                Intent i = new Intent(getBaseContext(),TeamActivity.class);
-                i.putExtra("team",teamList.get(position));
-                i.putExtra("onTeam",false);
-                startActivity(i);
+                output_team = ((TextView)view).getText().toString();
+                setTeam();
             }
         });
     }
@@ -103,14 +107,12 @@ public class TeamSearchActivity extends AppCompatActivity {
 
     public void onResume(){
         super.onResume();
-
         teamList.clear();
         firebaseRef.child("Teams").addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
                 for (DataSnapshot shot : dataSnapshot.getChildren()) {
                     teamList.add(shot.child("Info").child("Name").getValue().toString());
-
                 }
             }
 
@@ -123,6 +125,13 @@ public class TeamSearchActivity extends AppCompatActivity {
         searchResults.setAdapter(new ArrayAdapter<String>(getBaseContext(), android.R.layout.simple_list_item_1, teamList));
     }
 
+    public void setTeam(){
+        Intent i = this.getIntent();
+        i.putExtra("OUTPUT_TEAM",output_team);
+        setResult(1,i);
+        finish();
+
+    }
 
 
 }

@@ -1,5 +1,6 @@
 package com.villanova.edu.gladiator;
 
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
@@ -8,6 +9,8 @@ import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Debug;
+import android.preference.PreferenceManager;
+import android.support.v4.app.Fragment;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.ActionBarDrawerToggle;
@@ -15,7 +18,9 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Gravity;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -33,7 +38,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Timer;
 
-public class TeamActivity extends AppCompatActivity {
+public class TeamActivity extends Fragment implements View.OnClickListener {
 
 
     Firebase firebaseRef;
@@ -45,6 +50,7 @@ public class TeamActivity extends AppCompatActivity {
     Boolean onTeam = false;
     Boolean isCaptain = false;
     Button reqJoin;
+    Button newTeamButton;
     LinearLayout errorLayout;
     String username = " ";
     ListView requests;
@@ -57,19 +63,17 @@ public class TeamActivity extends AppCompatActivity {
 
     static final String appPrefKey = "TheGladiatorApp";
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_team);
-        Firebase.setAndroidContext(this);
-        SharedPreferences prefs = getSharedPreferences(appPrefKey, MODE_PRIVATE);
-        username=   prefs.getString("User","error");
-        firebaseRef = new Firebase("https://blistering-fire-747.firebaseio.com/");
-        mDrawerList = (ListView)findViewById(R.id.navList);
-        mDrawerLayout = (DrawerLayout)findViewById(R.id.drawer_layout);
-        mActivityTitle = getTitle().toString();
 
-             //Code to add a team manually
+
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container,Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        View out = inflater.inflate(R.layout.activity_team, container, false);
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getActivity().getApplicationContext());
+        username=   prefs.getString("User","error");
+        team = prefs.getString("Team","None");
+        firebaseRef = new Firebase("https://blistering-fire-747.firebaseio.com/");
+        //Code to add a team manually
         /*
              String[] names = new String[]{"Matt","Lauren","Will","Henry","John","Eric","Kevin","Sean","Donald"};
         Bitmap[] images = new Bitmap[9];
@@ -85,29 +89,80 @@ public class TeamActivity extends AppCompatActivity {
 */
         //This code gets the team values from firebase
 
-        player_list = (ListView) findViewById(R.id.team_list);
-        team_name = (TextView) findViewById(R.id.team_name);
-        team_stat = (TextView) findViewById(R.id.team_stat);
-        team_icon = (ImageView) findViewById(R.id.team_icon);
-        errorLayout = (LinearLayout)findViewById(R.id.error_holder);
-        reqJoin = (Button)findViewById(R.id.req_button);
-        requests = (ListView)findViewById(R.id.request_list);
-        requestTitle = (TextView)findViewById(R.id.request_title);
-        addDrawerItems();
-        setupDrawer();
-        if(getIntent() != null){
-            team = getIntent().getStringExtra("team");
-            if(team == null){
-                team = "None";
+        player_list = (ListView) out.findViewById(R.id.team_list);
+        team_name = (TextView) out.findViewById(R.id.team_name);
+        team_stat = (TextView)out.findViewById(R.id.team_stat);
+        team_icon = (ImageView) out.findViewById(R.id.team_icon);
+        errorLayout = (LinearLayout)out.findViewById(R.id.error_holder);
+        reqJoin = (Button)out.findViewById(R.id.req_button);
+        reqJoin.setOnClickListener(this);
+        requests = (ListView)out.findViewById(R.id.request_list);
+        requestTitle = (TextView)out.findViewById(R.id.request_title);
+        newTeamButton = (Button)out.findViewById(R.id.new_team_button);
+        newTeamButton.setOnClickListener(this);
+
+        setVisibleTeam(getArguments().getString("Team", "None"));
+
+        Log.d("DEBUG",getArguments().getString("Team","None"));
+
+
+
+
+
+        return out;
+
+    }
+
+    public static Fragment newInstance(String team){
+        TeamActivity act = new TeamActivity();
+        Bundle args = new Bundle();
+        args.putString("Team", team);
+        act.setArguments(args);
+        return act;
+    }
+
+
+
+
+
+
+
+
+
+
+    public void requestJoin(){
+        firebaseRef.child("Teams").addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                for (DataSnapshot shot : dataSnapshot.getChildren()) {
+                    if (shot.child("Info").child("Name").getValue().toString().contains(getArguments().getString("Team", "None"))){
+                        Log.d("DEBUG","REQUESTED TEAM FOUND");
+                        firebaseRef.child("Teams").child(shot.getKey()).child("Requests").child(username).child("active").setValue(true);
+                    }
+                }
+                reqJoin.setText("Request Sent");
             }
-        }
-        //Check if the user is on the team, and check if they are captain
+
+            @Override
+            public void onCancelled(FirebaseError firebaseError) {
+                reqJoin.setText("ERROR");
+            }
+        });
+
+        reqJoin.setEnabled(false);
+   }
+
+
+
+    public void setVisibleTeam(final String theTeam){
+
+//Check if the user is on the team, and check if they are captain
         //DEBUG
-        firebaseRef.child("Teams").addValueEventListener(new ValueEventListener() {
+        firebaseRef.child("Teams").addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot snapshot) {
                 for (DataSnapshot shotA : snapshot.getChildren()) {
-                    if (shotA.child("Info").child("Name").getValue().toString().contains(team)) {
+                    if (shotA.child("Info").child("Name").getValue().toString().contains(theTeam)) {
                         Log.d("DEBUG", "TEAM FOUND");
                         for (DataSnapshot shot : shotA.getChildren()) {
                             if (shot.getKey() == "Players") {
@@ -137,11 +192,11 @@ public class TeamActivity extends AppCompatActivity {
                 final List<String> requestUsers = new ArrayList<>();
 
                 if (isCaptain) {
-                    firebaseRef.child("Teams").addValueEventListener(new ValueEventListener() {
+                    firebaseRef.child("Teams").addListenerForSingleValueEvent(new ValueEventListener() {
                         @Override
                         public void onDataChange(DataSnapshot snapshot) {
                             for (DataSnapshot shotA : snapshot.getChildren()) {
-                                if (shotA.child("Info").child("Name").getValue().toString().contains(team)) {
+                                if (shotA.child("Info").child("Name").getValue().toString().contains(theTeam)) {
                                     for (DataSnapshot shot : shotA.getChildren()) {
                                         if (shot.getKey() == "Requests") {
                                             for (DataSnapshot shot2 : shot.getChildren()) {
@@ -164,36 +219,43 @@ public class TeamActivity extends AppCompatActivity {
                     }
                 }
 
+
+                //HERE'S THE CODE TO GET THE IMAGES FOR THE REQEUSTING USERS
                 List<Bitmap> reqImages = new ArrayList<Bitmap>();
                 for (int x = 0; x < requestUsers.size(); x++) {
                     Bitmap largeIcon = BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher);
                     reqImages.add(largeIcon);
                 }
-                requests.setAdapter(new TeamRequestListAdapter(getBaseContext(), requestUsers, reqImages, firebaseRef));
+                requests.setAdapter(new TeamRequestListAdapter(getActivity(), requestUsers, reqImages, firebaseRef, team));
 
 
-                //Handle other stuff
-                if (!team.contains("None")) {
+                //Things to do if the team is not none
+                if (!theTeam.contains("None")) {
+                    //If the user isn't on the team show the request button
                     if (!onTeam) {
                         reqJoin.setVisibility(View.VISIBLE);
                     }
+                    //Get Team data and write it to the activity
                     final List<String> playerNames = new ArrayList<>();
-                    firebaseRef.child("Teams").addValueEventListener(new ValueEventListener() {
+                    firebaseRef.child("Teams").addListenerForSingleValueEvent(new ValueEventListener() {
                         @Override
                         public void onDataChange(DataSnapshot snapshot) {
                             for (DataSnapshot shotA : snapshot.getChildren()) {
-                                if (shotA.child("Info").child("Name").getValue().toString().contains(team)) {
+                                if (shotA.child("Info").child("Name").getValue().toString().contains(theTeam)) {
                                     for (DataSnapshot shot : shotA.getChildren()) {
                                         if (shot.getKey() == "Players") {
+                                            //Add players to the player list
                                             for (DataSnapshot shot2 : shot.getChildren()) {
                                                 playerNames.add(shot2.getKey());
                                             }
                                         }
+                                        //Get the team name
                                         if (shot.getKey() == "Info") {
                                             for (DataSnapshot shot2 : shot.getChildren()) {
                                                 team_name.setText(shot2.getValue().toString());
                                             }
                                         }
+                                        //Get the team win/loss
                                         if (shot.getKey() == "Stats") {
                                             String temp = " ";
                                             String wins = " ";
@@ -210,8 +272,9 @@ public class TeamActivity extends AppCompatActivity {
                                         }
                                     }
                                 }
+                                //HERE'S THE IMAGES TO FOR EACH PLAYER ON TEAM
                                 Bitmap[] images = new Bitmap[playerNames.size()];
-                                player_list.setAdapter(new TeamListAdapter(getBaseContext(), playerNames.toArray(new String[playerNames.size()]), images));
+                                player_list.setAdapter(new TeamListAdapter(getActivity(), playerNames.toArray(new String[playerNames.size()]), images));
                             }
                         }
 
@@ -219,9 +282,10 @@ public class TeamActivity extends AppCompatActivity {
                         public void onCancelled(FirebaseError error) {
                         }
                     });
-
+                    //HERES WHERE THE TEAM ICON IS SET
                     team_icon.setImageResource(R.mipmap.ic_launcher);
                 } else {
+                    //If the team is "NONE" then only show the button to find/create team
                     player_list.setVisibility(View.GONE);
                     team_icon.setVisibility(View.GONE);
                     team_name.setVisibility(View.GONE);
@@ -239,109 +303,22 @@ public class TeamActivity extends AppCompatActivity {
 
 
     }
-
-
-
-
-
-
-
-    public void handleNewTeam(View v){
-        Intent intent = new Intent(this,TeamSearchActivity.class);
-        startActivity(intent);
+    public void handleNewTeam(){
+        //If you press the find team button then launch search activity
+        Intent intent = new Intent(getActivity(),TeamSearchActivity.class);
+        startActivityForResult(intent,0);
     }
 
-    public void requestJoin(View v){
 
-        firebaseRef.child("Teams").addValueEventListener(new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot dataSnapshot) {
-                for(DataSnapshot shot : dataSnapshot.getChildren()){
-                    if(shot.child("Info").child("Name").getValue().toString().contains(team)){
-                        firebaseRef.child("Teams").child(shot.getKey()).child("Requests").child(username).setValue(true);
-                    }
-                }
-            }
-            @Override
-            public void onCancelled(FirebaseError firebaseError) {
-                reqJoin.setText("ERROR");
-            }
-        });
-        reqJoin.setText("Request Sent");
-        reqJoin.setEnabled(false);
-   }
-
-    private void addDrawerItems() {
-        String[] osArray = { "News", "Schedule", "My Team", "Stats", "Settings" };
-        mAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, osArray);
-        mDrawerList.setAdapter(mAdapter);
-        mDrawerList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                switch(position){
-                    case 0:
-                        //Do nothing and close the thing
-                        mDrawerLayout.closeDrawer(Gravity.LEFT);
-                        break;
-                    case 1:
-                        //Schedule acitivyt
-                        break;
-                    case 2:
-                        //Team activity
-                        Intent intent = new Intent(getBaseContext(), TeamActivity.class);
-                        startActivity(intent);
-                        break;
-                    case 3:
-                        break;
-                    case 4:
-                        break;
-                }
-            }
-        });
-    }
-
-    private void setupDrawer() {
-        mDrawerToggle = new ActionBarDrawerToggle(this, mDrawerLayout,
-                R.string.drawer_open, R.string.drawer_close) {
-
-            /** Called when a drawer has settled in a completely open state. */
-            public void onDrawerOpened(View drawerView) {
-                super.onDrawerOpened(drawerView);
-                getSupportActionBar().setTitle("Navigation");
-                invalidateOptionsMenu(); // creates call to onPrepareOptionsMenu()
-                Log.d("DEBUG",getSharedPreferences(appPrefKey,0).getString("User","SHIT"));
-            }
-
-            /** Called when a drawer has settled in a completely closed state. */
-            public void onDrawerClosed(View view) {
-                super.onDrawerClosed(view);
-                getSupportActionBar().setTitle(mActivityTitle);
-                invalidateOptionsMenu(); // creates call to onPrepareOptionsMenu()
-            }
-
-        };
-        mDrawerToggle.setDrawerIndicatorEnabled(true);
-        mDrawerLayout.setDrawerListener(mDrawerToggle);
-
-    }
 
     @Override
-    protected void onPostCreate(Bundle savedInstanceState) {
-        super.onPostCreate(savedInstanceState);
-        mDrawerToggle.syncState();
+    public void onClick(View v) {
+        if(v.getId() == R.id.req_button){
+            requestJoin();
+        }else if(v.getId() == R.id.new_team_button){
+            handleNewTeam();
+        }
     }
-
-    @Override
-    public void onConfigurationChanged(Configuration newConfig) {
-        super.onConfigurationChanged(newConfig);
-        mDrawerToggle.onConfigurationChanged(newConfig);
-    }
-
-
-
-
-
-
 
 
 

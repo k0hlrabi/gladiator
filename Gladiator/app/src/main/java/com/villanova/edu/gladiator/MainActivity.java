@@ -2,6 +2,8 @@ package com.villanova.edu.gladiator;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
+import android.preference.PreferenceManager;
+import android.support.v4.app.Fragment;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
@@ -12,8 +14,10 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.FrameLayout;
 import android.widget.ListView;
 import android.widget.Toast;
+import android.support.v4.app.FragmentManager;
 
 import android.view.View;
 
@@ -35,7 +39,10 @@ public class MainActivity extends AppCompatActivity {
     private ActionBarDrawerToggle mDrawerToggle;
     private DrawerLayout mDrawerLayout;
     private String mActivityTitle;
+
+    FrameLayout fragmentHolder;
     String username;
+    String usersTeam = "None";
     private static final String prefsKey = "TheGladiatorApp";
 
 
@@ -44,29 +51,28 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         Firebase.setAndroidContext(this);
         setContentView(R.layout.activity_main);
+        fragmentHolder = (FrameLayout)findViewById(R.id.fragment_holder);
 
         Firebase myFirebaseRef = new Firebase("https://blistering-fire-747.firebaseio.com/");
-        SharedPreferences prefs = getSharedPreferences(prefsKey,0);
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());// 0 - for private mode
         username=   prefs.getString("User","error");
         Log.d("LOGIN DEBUG",username + " Try 2");
         if(username.contains("error")){
             Intent intent = new Intent(this, LoginActivity.class);
             startActivity(intent);
         }
-        username=   prefs.getString("User","error");
-        mainListView = (ListView) findViewById( R.id.mainListView );
-
-        String[] planets = new String[] { "Final Score (4/8): Snakes 54 Lions 38", "Jon Snow scored 18 points vs Jaguars (4/8)", "The Shot Callers are now in first place with a record of 4-0",
-                "Final Score (4/7): Shot Callers 61 Ballers 39", "The Chefs forfeited their last game vs the Frosh", "Final Score (4/7): Kobes 43 No Name 29",
-                "Tyrion Lannister has 11 assists in win over Mavericks", "All games on 4/6 have been postponed due to the weather", "Final Score (4/1): Snakes 38 Joes 37"};
-        ArrayList<String> planetList = new ArrayList<String>();
-        planetList.addAll( Arrays.asList(planets) );
+        username  = prefs.getString("User","error");
+        usersTeam = prefs.getString("Team","None");
+        if(usersTeam.trim().isEmpty()){
+            usersTeam = "None";
+            SharedPreferences.Editor edit = prefs.edit();
+          edit.putString("Team","None");
+            edit.commit();
+        }
 
         // Create ArrayAdapter using the planet list.
-        listAdapter = new ArrayAdapter<String>(this, R.layout.simplerow, planetList);
 
-        // Set the ArrayAdapter as the ListView's adapter.
-        mainListView.setAdapter( listAdapter );
+
 
         mDrawerList = (ListView)findViewById(R.id.navList);
         mDrawerLayout = (DrawerLayout)findViewById(R.id.drawer_layout);
@@ -77,7 +83,7 @@ public class MainActivity extends AppCompatActivity {
 
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setHomeButtonEnabled(true);
-
+        selectItem(0);
     }
 
     private void addDrawerItems() {
@@ -87,26 +93,41 @@ public class MainActivity extends AppCompatActivity {
         mDrawerList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                switch(position){
-                    case 0:
-                        //Do nothing and close the thing
-                        mDrawerLayout.closeDrawer(Gravity.LEFT);
-                        break;
-                    case 1:
-                        //Schedule acitivyt
-                        break;
-                    case 2:
-                        //Team activity
-                        Intent intent = new Intent(getBaseContext(), TeamActivity.class);
-                        startActivity(intent);
-                        break;
-                    case 3:
-                        break;
-                    case 4:
-                        break;
-                }
+                selectItem(position);
             }
         });
+    }
+
+
+    public void selectItem(int position){
+
+        FragmentManager fragmentManager = getSupportFragmentManager();
+        Fragment fragment = new NewsFragment();
+
+        switch(position){
+            case 0:
+                fragment = new NewsFragment();
+                break;
+            case 1:
+                //Schedule acitivyt
+                fragment = new ScheduleFragment();
+                break;
+            case 2:
+                //Team activity
+                fragment = TeamActivity.newInstance(usersTeam);
+                break;
+            case 3:
+                //Leauge Stats
+                break;
+            case 4:
+                //Settings
+                fragment = new SettingsFragment();
+                break;
+        }
+        fragmentManager.beginTransaction()
+                .replace(R.id.fragment_holder, fragment)
+                .commit();
+        mDrawerLayout.closeDrawer(Gravity.LEFT);
     }
 
     private void setupDrawer() {
@@ -118,7 +139,7 @@ public class MainActivity extends AppCompatActivity {
                 super.onDrawerOpened(drawerView);
                 getSupportActionBar().setTitle("Navigation");
                 invalidateOptionsMenu(); // creates call to onPrepareOptionsMenu()
-                Log.d("DEBUG",getSharedPreferences(prefsKey,0).getString("User","SHIT"));
+                Log.d("DEBUG", PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getString("User", "SHIT"));
             }
 
             /** Called when a drawer has settled in a completely closed state. */
@@ -170,5 +191,26 @@ public class MainActivity extends AppCompatActivity {
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+
+
+
+
+
+    //THis is only used for the teams so we can always assume the user wants to be on the team page.
+    @Override
+    protected void onActivityResult(int requestCode,int resultCode,Intent data){
+        FragmentManager fragmentManager = getSupportFragmentManager();
+        String teamOut ="None";
+        if(data != null){
+             teamOut = data.getStringExtra("OUTPUT_TEAM");
+        }
+       Fragment fragment = TeamActivity.newInstance(teamOut);
+        fragmentManager.beginTransaction()
+                .replace(R.id.fragment_holder, fragment)
+                .commitAllowingStateLoss();
+
+
     }
 }
