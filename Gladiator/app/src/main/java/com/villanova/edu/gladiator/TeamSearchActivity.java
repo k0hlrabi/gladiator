@@ -69,7 +69,7 @@ public class TeamSearchActivity extends AppCompatActivity {
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 teamList.clear();
-                firebaseRef.child("Teams").addValueEventListener(new ValueEventListener() {
+                firebaseRef.child("Teams").addListenerForSingleValueEvent(new ValueEventListener() {
                     @Override
                     public void onDataChange(DataSnapshot dataSnapshot) {
                         for (DataSnapshot shot : dataSnapshot.getChildren()) {
@@ -109,6 +109,7 @@ public class TeamSearchActivity extends AppCompatActivity {
         final Dialog a = new Dialog(this);
         a.setContentView(R.layout.new_team_dialog);
         final EditText nameInput = (EditText)a.findViewById(R.id.new_team_name);
+        nameInput.setText(searchBox.getText().toString());
         Button positive = (Button)a.findViewById(R.id.new_team_positive);
         positive.setOnClickListener(new View.OnClickListener() {
             @Override

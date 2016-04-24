@@ -51,7 +51,6 @@ public class MainActivity extends AppCompatActivity {
         Firebase.setAndroidContext(this);
         setContentView(R.layout.activity_main);
         fragmentHolder = (FrameLayout)findViewById(R.id.fragment_holder);
-
         Firebase myFirebaseRef = new Firebase("https://blistering-fire-747.firebaseio.com/");
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());// 0 - for private mode
         username=   prefs.getString("User","error");
@@ -69,7 +68,6 @@ public class MainActivity extends AppCompatActivity {
             edit.commit();
         }
 
-        // Create ArrayAdapter using the planet list.
 
         mDrawerList = (ListView)findViewById(R.id.navList);
         mDrawerLayout = (DrawerLayout)findViewById(R.id.drawer_layout);
@@ -102,20 +100,28 @@ public class MainActivity extends AppCompatActivity {
         switch(position){
             case 0:
                 fragment = new NewsFragment();
+                getSupportActionBar().setTitle("News");
+
                 break;
             case 1:
                 //Schedule acitivyt
                 fragment = new ScheduleFragment();
+                getSupportActionBar().setTitle("Schedule");
+
                 break;
             case 2:
                 //Team activity
                 fragment = TeamActivity.newInstance(usersTeam);
+                getSupportActionBar().setTitle("Team");
+
                 break;
             case 3:
-                //Leauge Stats
+                fragment = new StatsFragment();
+                getSupportActionBar().setTitle("Stats");
                 break;
             case 4:
                 //Settings
+                getSupportActionBar().setTitle("Settings");
                 fragment = new SettingsFragment();
                 break;
         }

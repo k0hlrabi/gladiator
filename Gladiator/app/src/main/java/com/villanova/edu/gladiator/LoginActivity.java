@@ -31,6 +31,7 @@ public class LoginActivity extends AppCompatActivity {
     private static final String TAG = "LoginActivity";
     private static final int REQUEST_SIGNUP = 0;
     private static final String prefsKey = "TheGladiatorApp";
+    public boolean loginSuccess = false;
 
     @Bind(R.id.input_email) EditText _emailText;
     @Bind(R.id.input_password) EditText _passwordText;
@@ -75,12 +76,10 @@ public class LoginActivity extends AppCompatActivity {
         progressDialog.setIndeterminate(true);
         progressDialog.setMessage("Authenticating...");
         progressDialog.show();
-
         final String email = _emailText.getText().toString();
         String password = _passwordText.getText().toString();
         final String[] userName = {" "};
         final String[] team = {" "};
-
         // TODO: Implement your own authentication logic here.
         final Firebase ref = new Firebase("https://blistering-fire-747.firebaseio.com/");
         SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());// 0 - for private mode
@@ -88,25 +87,25 @@ public class LoginActivity extends AppCompatActivity {
         ref.authWithPassword(email, password, new Firebase.AuthResultHandler() {
             @Override
             public void onAuthenticated(AuthData authData) {
-             ref.child("users").addValueEventListener(new ValueEventListener() {
+             ref.child("users").addListenerForSingleValueEvent(new ValueEventListener() {
                  @Override
                  public void onDataChange(DataSnapshot dataSnapshot) {
                      for (DataSnapshot a : dataSnapshot.getChildren()) {
                          if (a.child("email").getValue().toString().contains(email)) {
                              userName[0] = a.getKey();
                              Log.d("DEBUG", "FOUND USERNAME" + a.getKey());
-                             break;
+                             return;
                          }
                      }
+                loginSuccess =false;
                  }
-
                  @Override
                  public void onCancelled(FirebaseError firebaseError) {
-
+                    loginSuccess = false;
                  }
              });
                 //Find the user's team
-                ref.child("Teams").addValueEventListener(new ValueEventListener() {
+                ref.child("Teams").addListenerForSingleValueEvent(new ValueEventListener() {
                     @Override
                     public void onDataChange(DataSnapshot dataSnapshot) {
                         //GO through each team
@@ -125,24 +124,21 @@ public class LoginActivity extends AppCompatActivity {
                         editor.putString("User", userName[0]);
                         editor.putString("Team", team[0]);
                         editor.apply();
+                        loginSuccess = true;
                     }
 
                     @Override
                     public void onCancelled(FirebaseError firebaseError) {
+                        loginSuccess = false;
 
                     }
                 });
 
-
-
-
             }
-
-
 
             @Override
             public void onAuthenticationError(FirebaseError firebaseError) {
-                // there was an error
+                loginSuccess = false;
             }
 
         });
@@ -151,8 +147,13 @@ public class LoginActivity extends AppCompatActivity {
                 new Runnable() {
                     public void run() {
                         // On complete call either onLoginSuccess or onLoginFailed
-                        onLoginSuccess();
-                        // onLoginFailed();
+                        if(loginSuccess) {
+                            onLoginSuccess();
+                        }else{
+                            onLoginFailed();
+                        }
+
+
                         progressDialog.dismiss();
                     }
                 }, 3000);
@@ -163,8 +164,9 @@ public class LoginActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == REQUEST_SIGNUP) {
             if (resultCode == RESULT_OK) {
+                onLoginSuccess();
 
-                // TODO: Implement successful signup logic here
+
                 this.finish();
             }
         }

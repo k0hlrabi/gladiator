@@ -1,8 +1,10 @@
 package com.villanova.edu.gladiator;
 
 import android.app.ProgressDialog;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
@@ -11,8 +13,10 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.firebase.client.DataSnapshot;
 import com.firebase.client.Firebase;
 import com.firebase.client.FirebaseError;
+import com.firebase.client.ValueEventListener;
 
 import java.util.Map;
 
@@ -27,6 +31,7 @@ public class SignupActivity extends AppCompatActivity {
     @Bind(R.id.input_password) EditText _passwordText;
     @Bind(R.id.btn_signup) Button _signupButton;
     @Bind(R.id.link_login) TextView _loginLink;
+    boolean goodSignUp = false;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -45,48 +50,39 @@ public class SignupActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 // Finish the registration screen and return to the Login activity
-                finish();
+                if(goodSignUp) {
+                    finish();
+                }else {
+                    onSignupFailed();
+                }
             }
         });
     }
 
     public void signup() {
         Log.d(TAG, "Signup");
-
         if (!validate()) {
             onSignupFailed();
             return;
         }
-
         _signupButton.setEnabled(false);
-
         final ProgressDialog progressDialog = new ProgressDialog(SignupActivity.this,
                 R.style.AppTheme_Dark_Dialog);
         progressDialog.setIndeterminate(true);
         progressDialog.setMessage("Creating Account...");
         progressDialog.show();
-
         final String name = _nameText.getText().toString();
         final String email = _emailText.getText().toString();
         String password = _passwordText.getText().toString();
-
-
         // TODO: Implement your own signup logic here.
-        Firebase ref = new Firebase("https://blistering-fire-747.firebaseio.com/");
-        SharedPreferences pref = getApplicationContext().getSharedPreferences("MyPref", 0); // 0 - for private mode
-        final SharedPreferences.Editor editor = pref.edit();
-        editor.putString("email", email);
-        editor.commit();
+        final Firebase ref = new Firebase("https://blistering-fire-747.firebaseio.com/");
         ref.createUser(email, password, new Firebase.ValueResultHandler<Map<String, Object>>() {
             @Override
             public void onSuccess(Map<String, Object> result) {
-                System.out.println("Successfully created user account with uid: " + result.get("uid"));
-                Firebase rootRef = new Firebase("https://blistering-fire-747.firebaseio.com");
-                rootRef.child("users").child(name).child("email").setValue(email);
+                ref.child("users").child(name).child("email").setValue(email);
             }
             @Override
             public void onError(FirebaseError firebaseError) {
-                // there was an error
             }
         });
 
@@ -95,8 +91,8 @@ public class SignupActivity extends AppCompatActivity {
                     public void run() {
                         // On complete call either onSignupSuccess or onSignupFailed
                         // depending on success
-                        onSignupSuccess();
-                        // onSignupFailed();
+                            onSignupSuccess();
+                            //onSignupFailed();
                         progressDialog.dismiss();
                     }
                 }, 3000);
@@ -105,30 +101,54 @@ public class SignupActivity extends AppCompatActivity {
 
     public void onSignupSuccess() {
         _signupButton.setEnabled(true);
-        setResult(RESULT_OK, null);
-        finish();
-    }
+        final String[] userName = {" "};
+        final String[] team = {" "};
+        final Firebase ref = new Firebase("https://blistering-fire-747.firebaseio.com/");
+        SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());// 0 - for private mode
+        final SharedPreferences.Editor editor = pref.edit();
+        ref.child("Teams").addListenerForSingleValueEvent(new ValueEventListener() {
+                                                     @Override
+                                                     public void onDataChange(DataSnapshot dataSnapshot) {
+                                                         //GO through each team
+                                                         for (DataSnapshot sshot : dataSnapshot.getChildren()) {
+                                                             //Go through each datapoint in team
+                                                             for (DataSnapshot sshot2 : sshot.child("Players").getChildren()) {
+                                                                 if (sshot2.getKey().contains(userName[0])) {
+                                                                     team[0] = sshot.child("Info").child("Name").getValue().toString();
+                                                                     Log.d("DEBUG", "FOUND USERS TEAM" + sshot.child("Info").child("Name").getValue().toString());
+                                                                     break;
+                                                                 }
+                                                             }
+                                                         }
+                                                         editor.putString("User", userName[0]);
+                                                         editor.putString("Team", team[0]);
+                                                         editor.apply();
+                                                     }
+                                                     @Override
+                                                     public void onCancelled(FirebaseError firebaseError) {
+
+                                                     }
+                                                 });
+
+            finish();
+        }
 
     public void onSignupFailed() {
         Toast.makeText(getBaseContext(), "Login failed", Toast.LENGTH_LONG).show();
-
         _signupButton.setEnabled(true);
     }
 
     public boolean validate() {
         boolean valid = true;
-
         String name = _nameText.getText().toString();
         String email = _emailText.getText().toString();
         String password = _passwordText.getText().toString();
-
         if (name.isEmpty() || name.length() < 3) {
             _nameText.setError("at least 3 characters");
             valid = false;
         } else {
             _nameText.setError(null);
         }
-
         if (email.isEmpty() || !android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
             _emailText.setError("enter a valid email address");
             valid = false;
